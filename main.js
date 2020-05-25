@@ -8,10 +8,11 @@ var app = http.createServer(function (request, response) {
     var queryData = url.parse(_url, true).query; // true면 객체형식으로, false면 문자열 형식으로 가져옴 <ㅡ GET 방식으로 데이터 받기
     var title = queryData.id;
     var pathName = url.parse(_url, true).pathname;
-    console.log(pathName);
+    var control = `<a href="/create">CREATE</a> <a href="/update?id=${title}">UPDATE</a>`;
 
     if (_url == '/') {
        title = 'Welcome';
+       control = '<a href="/create">CREATE</a>';
     }
     response.writeHead(200);
 
@@ -24,7 +25,7 @@ var app = http.createServer(function (request, response) {
         return list;
     }
 
-    var templateHTML = (title, list, description) => {
+    var templateHTML = (title, list, description, _control) => {
         if (title == 'Welcome') {
             description = `
                     The World Wide Web (abbreviated WWW or the Web) is an information space where documents and other web resources are identified by Uniform Resource Locators (URLs), interlinked by hypertext links, and can be accessed via the Internet.[1] English scientist Tim Berners-Lee invented the World Wide Web in 1989. He wrote the first web browser computer program in 1990 while employed at CERN in Switzerland.[2][3] The Web browser was released outside of CERN in 1991, first to other research institutions starting in January 1991 and to the general public on the Internet in August 1991.
@@ -42,7 +43,7 @@ var app = http.createServer(function (request, response) {
                 <body>
                     <h1><a href="/">WEB</a></h1>           
                     ${list}
-                    <p><a href="/create">CREATE</a></p>         
+                    <p>${_control}</p>         
                     
                     <h2>${title}</h2>                
                     <p>
@@ -58,7 +59,7 @@ var app = http.createServer(function (request, response) {
         fs.readdir('./data', (err, fileList) => {
             var list = templateList(fileList);
             fs.readFile(`data/${title}`, 'utf-8', (err, description) => {
-                var template = templateHTML(title, list, description);
+                var template = templateHTML(title, list, description, control);
 
                 response.end(template);
                 //response.end(fs.readFileSync(__dirname + url));
@@ -71,14 +72,14 @@ var app = http.createServer(function (request, response) {
             var list = templateList(fileList);
             fs.readFile(`data/${title}`, 'utf-8', (err, description) => {
                 var template = templateHTML(title, list, `
-                <form method="post" action="http://localhost:3000/create_process">
+                <form method="post" action="/create_process">
                     <input type="text" name="title" id="title" width:"200" placeholder="title">
                     <p>
                         <textarea name="description" rows="10" style="resize: none;" placeholder="description"></textarea>
                     </p>
                     <input type="submit" name="submit" id="submit" value="Submit">
                 </form>
-                `);
+                `, '');
 
                 response.end(template);
                 //response.end(fs.readFileSync(__dirname + url));
@@ -102,6 +103,45 @@ var app = http.createServer(function (request, response) {
             });
         });
         
+    }else if(pathName == '/update') {
+        fs.readdir('./data', (err, fileList) => {
+            var title = queryData.id;
+            var list = templateList(fileList);
+            fs.readFile(`./data/${title}`, 'utf-8', (err, description) => {
+                var template = templateHTML(title, list, `
+                <form method="post" action="/update_process">
+                    <p><input type="text" name="id" id="title" width:"200" readonly value=${title} style="background:#eeeeee;"></p>
+                    <p><input type="text" name="title" id="title" width:"200" placeholder="title" value=${title}></p>
+                    <p>
+                        <textarea name="description" rows="10" style="resize: none;" placeholder="description">${description}</textarea>
+                    </p>
+                    <input type="submit" name="submit" id="submit" value="Submit">
+                </form>
+                `, '');
+
+                response.end(template);
+                //response.end(fs.readFileSync(__dirname + url));
+            });
+
+        });
+
+    } else if (pathName == '/update_process'){
+        var body = '';
+        request.on('data', (data)=>{
+            body += data;
+        });
+        request.on('end', () => {
+            var post = qs.parse(body);
+            var id = post.id;
+            var title = post.title;
+            var description = post.description;
+            fs.rename(`data/${id}`, `data/${title}`, (err) => { //파일 이름 수정
+                fs.writeFile(`data/${title}`, description, 'utf-8', (err) => {  // 수정된 파일을 찾아 내용 쓰기
+                    response.writeHead(302, {'Location':`/?id=${title}`});
+                    response.end('Success');
+                });
+            });
+        });
     }else{
         response.writeHead(404);
         response.end('Not Found');
