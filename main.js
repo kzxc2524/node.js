@@ -8,7 +8,13 @@ var app = http.createServer(function (request, response) {
     var queryData = url.parse(_url, true).query; // true면 객체형식으로, false면 문자열 형식으로 가져옴 <ㅡ GET 방식으로 데이터 받기
     var title = queryData.id;
     var pathName = url.parse(_url, true).pathname;
-    var control = `<a href="/create">CREATE</a> <a href="/update?id=${title}">UPDATE</a>`;
+    var control = `
+        <a href="/create">CREATE</a> <a href="/update?id=${title}">UPDATE</a>
+        <form action="/delete_process" method="post">
+            <input type="hidden" name="id" value="${title}">
+            <input type="submit" value="delete">
+        </form>
+    `;
 
     if (_url == '/') {
        title = 'Welcome';
@@ -125,7 +131,7 @@ var app = http.createServer(function (request, response) {
 
         });
 
-    } else if (pathName == '/update_process'){
+    }else if (pathName == '/update_process'){
         var body = '';
         request.on('data', (data)=>{
             body += data;
@@ -138,8 +144,21 @@ var app = http.createServer(function (request, response) {
             fs.rename(`data/${id}`, `data/${title}`, (err) => { //파일 이름 수정
                 fs.writeFile(`data/${title}`, description, 'utf-8', (err) => {  // 수정된 파일을 찾아 내용 쓰기
                     response.writeHead(302, {'Location':`/?id=${title}`});
-                    response.end('Success');
+                    response.end('Update Success');
                 });
+            });
+        });
+    } else if(pathName == '/delete_process'){
+        var body = '';
+        request.on('data',(data)=>{
+            body += data;
+        });
+        request.on('end', () => {
+            var post = qs.parse(body);
+            var id = post.id;
+            fs.unlink(`data/${id}`, (err)=>{
+                response.writeHead(302, {Location:'/'});
+                response.end('Delete Success');
             });
         });
     }else{
