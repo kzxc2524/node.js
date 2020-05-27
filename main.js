@@ -3,6 +3,8 @@ var fs = require('fs');
 var url = require('url');
 var qs = require('querystring');
 
+var template = require('./lib/template.js')
+
 var app = http.createServer(function (request, response) {
     var _url = request.url;
     var queryData = url.parse(_url, true).query; // true면 객체형식으로, false면 문자열 형식으로 가져옴 <ㅡ GET 방식으로 데이터 받기
@@ -22,52 +24,13 @@ var app = http.createServer(function (request, response) {
     }
     response.writeHead(200);
 
-    var templateList = (fileList) => {
-        var list = '<ul>';
-        for (var i = 0; i < fileList.length; i++) {
-            list += `<li><a href="/?id=${fileList[i]}">${fileList[i]}</a></li>`
-        }
-        list += '</ul >';
-        return list;
-    }
-
-    var templateHTML = (title, list, description, _control) => {
-        if (title == 'Welcome') {
-            description = `
-                    The World Wide Web (abbreviated WWW or the Web) is an information space where documents and other web resources are identified by Uniform Resource Locators (URLs), interlinked by hypertext links, and can be accessed via the Internet.[1] English scientist Tim Berners-Lee invented the World Wide Web in 1989. He wrote the first web browser computer program in 1990 while employed at CERN in Switzerland.[2][3] The Web browser was released outside of CERN in 1991, first to other research institutions starting in January 1991 and to the general public on the Internet in August 1991.
-                `;
-
-        }
-        //template literal은 ',"가 아닌 `(백틱)으로 감싸준다!
-        var template = `
-                <!doctype html>
-                <html>
-                <head>
-                    <title>WEB1 - ${title}</title>
-                    <meta charset="utf-8">
-                </head>
-                <body>
-                    <h1><a href="/">WEB</a></h1>           
-                    ${list}
-                    <p>${_control}</p>         
-                    
-                    <h2>${title}</h2>                
-                    <p>
-                        ${description}
-                    </p>
-                </body>
-                </html>    
-                `;
-        return template;
-    }
-
     if (pathName == '/'){
         fs.readdir('./data', (err, fileList) => {
-            var list = templateList(fileList);
+            var list = template.List(fileList);
             fs.readFile(`data/${title}`, 'utf-8', (err, description) => {
-                var template = templateHTML(title, list, description, control);
+                var HTML = template.HTML(title, list, description, control);
 
-                response.end(template);
+                response.end(HTML);
                 //response.end(fs.readFileSync(__dirname + url));
             });
 
@@ -75,9 +38,9 @@ var app = http.createServer(function (request, response) {
     }else if (pathName == '/create'){
         fs.readdir('./data', (err, fileList) => {
             var title = 'WEB - CREATE';
-            var list = templateList(fileList);
+            var list = template.List(fileList);
             fs.readFile(`data/${title}`, 'utf-8', (err, description) => {
-                var template = templateHTML(title, list, `
+                var HTML = template.HTML(title, list, `
                 <form method="post" action="/create_process">
                     <input type="text" name="title" id="title" width:"200" placeholder="title">
                     <p>
@@ -87,7 +50,7 @@ var app = http.createServer(function (request, response) {
                 </form>
                 `, '');
 
-                response.end(template);
+                response.end(HTML);
                 //response.end(fs.readFileSync(__dirname + url));
             });
 
@@ -112,9 +75,9 @@ var app = http.createServer(function (request, response) {
     }else if(pathName == '/update') {
         fs.readdir('./data', (err, fileList) => {
             var title = queryData.id;
-            var list = templateList(fileList);
+            var list = template.List(fileList);
             fs.readFile(`./data/${title}`, 'utf-8', (err, description) => {
-                var template = templateHTML(title, list, `
+                var HTML = template.HTML(title, list, `
                 <form method="post" action="/update_process">
                     <p><input type="text" name="id" id="title" width:"200" readonly value=${title} style="background:#eeeeee;"></p>
                     <p><input type="text" name="title" id="title" width:"200" placeholder="title" value=${title}></p>
@@ -125,7 +88,7 @@ var app = http.createServer(function (request, response) {
                 </form>
                 `, '');
 
-                response.end(template);
+                response.end(HTML);
                 //response.end(fs.readFileSync(__dirname + url));
             });
 
